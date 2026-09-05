@@ -1,0 +1,23 @@
+# Dépendances
+node_modules/
+vendor/
+
+# Variables d'environnement
+.env
+.env.local
+.env.*.local
+
+# Build
+web/dist/
+mobile/build/
+backend/public/build/
+
+# Éditeurs et système
+.vscode/
+.idea/
+.DS_Store
+
+# Laravel
+backend/storage/*.key
+backend/storage/logs/*.log
+backend/.phpunit.result.cache
