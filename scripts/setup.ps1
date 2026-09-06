@@ -42,10 +42,18 @@ try {
     if (-not (Trouver 'composer')) { Arreter 'Composer' 'https://getcomposer.org/download' }
     if (-not (Trouver 'npm'))      { Arreter 'Node.js'  'https://nodejs.org (version 20 ou plus)' }
 
+    # Certaines installations PHP font preceder chaque commande d'un avertissement
+    # de demarrage (un « extension= » en double dans php.ini, par exemple). Il se
+    # melange a la reponse attendue : on cherche donc un marqueur dans la sortie
+    # complete plutot que de la prendre telle quelle.
     # Guillemets simples cote PHP, doubles cote PowerShell : PowerShell 5.1
     # mange les guillemets doubles imbriques quand il appelle un programme natif.
-    $versionPhp = (& php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;")
-    if ([version]$versionPhp -lt [version]'8.3') {
+    $sortie = (& php -d display_errors=0 -d display_startup_errors=0 -r "echo 'PHPVER=', PHP_MAJOR_VERSION, '.', PHP_MINOR_VERSION;" | Out-String)
+    if ($sortie -notmatch 'PHPVER=(\d+)\.(\d+)') {
+        throw "impossible de lire la version de PHP. Reponse obtenue : $($sortie.Trim())"
+    }
+    $versionPhp = [version]"$($Matches[1]).$($Matches[2])"
+    if ($versionPhp -lt [version]'8.3') {
         Write-Host ""
         Write-Host "  PHP $versionPhp est trop ancien : il en faut 8.3 au minimum." -ForegroundColor Red
         Write-Host ""
@@ -56,7 +64,7 @@ try {
     # `pdo_sqlite` est livre active dans les paquets officiels Windows, mais une
     # installation maison peut l'avoir commente dans php.ini : mieux vaut le dire
     # maintenant que de laisser la migration echouer trois etapes plus loin.
-    & php -r "exit(extension_loaded('pdo_sqlite') ? 0 : 1);"
+    & php -d display_errors=0 -d display_startup_errors=0 -r "exit(extension_loaded('pdo_sqlite') ? 0 : 1);"
     if ($LASTEXITCODE -ne 0) {
         Write-Host ""
         Write-Host "  L'extension pdo_sqlite est désactivée." -ForegroundColor Red
@@ -65,7 +73,20 @@ try {
         exit 1
     }
     Bien 'Extension pdo_sqlite active'
-    Bien "Node $((& node -v).TrimStart('v'))"
+
+    $sortie = (& node -v | Out-String)
+    if ($sortie -notmatch 'v?(\d+)\.(\d+)\.(\d+)') {
+        throw "impossible de lire la version de Node. Reponse obtenue : $($sortie.Trim())"
+    }
+    $versionNode = [version]"$($Matches[1]).$($Matches[2]).$($Matches[3])"
+    if ($versionNode.Major -lt 20) {
+        Write-Host ""
+        Write-Host "  Node $versionNode est trop ancien : il en faut 20 au minimum." -ForegroundColor Red
+        Write-Host "  https://nodejs.org" -ForegroundColor Red
+        Write-Host ""
+        exit 1
+    }
+    Bien "Node $versionNode"
 
     $flutter = Trouver 'flutter'
     if ($flutter) { Bien 'Flutter détecté' } else { Note 'Flutter absent — le mobile sera ignoré' }

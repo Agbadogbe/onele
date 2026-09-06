@@ -26,19 +26,40 @@ command -v php      >/dev/null || arreter 'PHP'      'https://www.php.net/downlo
 command -v composer >/dev/null || arreter 'Composer' 'https://getcomposer.org/download'
 command -v npm      >/dev/null || arreter 'Node.js'  'https://nodejs.org (version 20 ou plus)'
 
-version_php="$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')"
+# Certaines installations PHP font précéder chaque commande d'un avertissement
+# de démarrage (un « extension= » en double dans php.ini, par exemple), qui se
+# mêlerait à la réponse : on cherche un marqueur dans la sortie plutôt que de la
+# prendre telle quelle.
+sortie="$(php -d display_errors=0 -d display_startup_errors=0 \
+  -r 'echo "PHPVER=", PHP_MAJOR_VERSION, ".", PHP_MINOR_VERSION;' 2>/dev/null)"
+version_php="$(printf '%s' "$sortie" | sed -n 's/.*PHPVER=\([0-9][0-9]*\.[0-9][0-9]*\).*/\1/p')"
+if [ -z "$version_php" ]; then
+  printf '\n\033[31m  Impossible de lire la version de PHP.\n  Réponse obtenue : %s\033[0m\n\n' "$sortie"
+  exit 1
+fi
 if [ "$(printf '%s\n8.3\n' "$version_php" | sort -V | head -1)" != "8.3" ]; then
   printf '\n\033[31m  PHP %s est trop ancien : il en faut 8.3 au minimum.\033[0m\n\n' "$version_php"
   exit 1
 fi
 bien "PHP $version_php"
 
-if ! php -r 'exit(extension_loaded("pdo_sqlite") ? 0 : 1);'; then
+if ! php -d display_errors=0 -d display_startup_errors=0 \
+     -r 'exit(extension_loaded("pdo_sqlite") ? 0 : 1);'; then
   printf '\n\033[31m  L'"'"'extension pdo_sqlite est désactivée.\n  Activez-la dans votre php.ini : extension=pdo_sqlite\033[0m\n\n'
   exit 1
 fi
 bien 'Extension pdo_sqlite active'
-bien "Node $(node -v | tr -d v)"
+
+version_node="$(node -v 2>/dev/null | sed -n 's/^v*\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/p')"
+if [ -z "$version_node" ]; then
+  printf '\n\033[31m  Impossible de lire la version de Node.\033[0m\n\n'
+  exit 1
+fi
+if [ "${version_node%%.*}" -lt 20 ]; then
+  printf '\n\033[31m  Node %s est trop ancien : il en faut 20 au minimum.\n  https://nodejs.org\033[0m\n\n' "$version_node"
+  exit 1
+fi
+bien "Node $version_node"
 
 if command -v flutter >/dev/null; then
   flutter_present=1
