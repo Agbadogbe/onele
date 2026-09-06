@@ -37,12 +37,27 @@ Deux commandes, sur n'importe quel système. **Aucun serveur de base de données
 installer** : Onélé tourne par défaut sur SQLite, c'est-à-dire un simple fichier
 créé automatiquement.
 
-**Windows** — depuis l'Explorateur (double-clic) ou une invite de commandes :
+**Windows** — le plus simple est le double-clic depuis l'Explorateur. Dans un
+terminal, la commande dépend duquel :
 
+```powershell
+# PowerShell — le préfixe .\ est obligatoire
+.\setup.bat
+.\start.bat
 ```
+
+```bat
+REM Invite de commandes (cmd.exe)
 setup.bat
 start.bat
 ```
+
+PowerShell refuse par sécurité de lancer un programme du dossier courant sans ce
+`.\` : sans lui, il répond « le terme n'est pas reconnu ».
+
+Clonez le dépôt dans **votre dossier personnel** — `C:\Users\vous\onele` par
+exemple — et surtout pas dans `C:\Windows\System32` : ce dossier est protégé en
+écriture et l'installation y échouerait.
 
 **macOS / Linux** :
 
@@ -397,6 +412,8 @@ apparaît en tête du tableau des RH.
 | `'php' n'est pas reconnu…` | PHP absent du `PATH`, ou terminal ouvert avant l'installation | Rouvrez un terminal ; le `PATH` n'est lu qu'au démarrage. |
 | `could not find driver` | l'extension `pdo_sqlite` est commentée dans `php.ini` | Décommentez `extension=pdo_sqlite` puis relancez. |
 | Le `.ps1` refuse de démarrer | politique d'exécution PowerShell | Passez par `setup.bat` / `start.bat`, qui la contournent proprement. |
+| `setup.bat n'est pas reconnu…` sous PowerShell | PowerShell ne lance rien depuis le dossier courant sans préfixe | Tapez `.\setup.bat` (avec le `.\`), ou passez par l'Explorateur. |
+| `Accès refusé` / `Permission denied` pendant l'installation | dépôt cloné dans un dossier protégé, `C:\Windows\System32` typiquement | Déplacez-le dans votre dossier personnel, puis relancez. |
 | `Address already in use` sur 8000, 8080 ou 5173 | un ancien lancement tourne encore | Fermez les fenêtres restées ouvertes, ou changez de port. |
 | L'espace web affiche « Hors ligne » | `php artisan reverb:start` n'est pas lancé | Démarrez-le ; l'application reste utilisable sans, simplement sans direct. |
 | Le mobile ne joint pas l'API depuis un émulateur Android | l'émulateur a son propre `localhost` | Rien à faire : le code bascule seul sur `10.0.2.2`. Sur un **téléphone réel**, remplacez l'hôte par l'IP locale de la machine. |
