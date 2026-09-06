@@ -8,8 +8,7 @@ $ErrorActionPreference = 'Stop'
 $racine  = Split-Path -Parent $PSScriptRoot
 $backend = Join-Path $racine 'backend'
 $web     = Join-Path $racine 'web'
-
-function Note([string]$texte) { Write-Host "  $texte" -ForegroundColor DarkGray }
+. (Join-Path $PSScriptRoot 'outils.ps1')
 
 try {
 
@@ -27,29 +26,26 @@ try {
         exit 1
     }
 
-    # Certaines installations exposent npm en .ps1 : Start-Process ne saurait pas
-    # le lancer. On vise donc le .cmd en priorite.
-    $npm = Get-Command 'npm.cmd' -ErrorAction SilentlyContinue
-    if (-not $npm) { $npm = Get-Command 'npm' -ErrorAction SilentlyContinue }
-    if (-not $npm) {
-        Write-Host ""
-        Write-Host "  npm est introuvable. Installez Node.js puis rouvrez un terminal." -ForegroundColor Red
-        Write-Host ""
-        exit 1
+    # Ce que l'installation a retenu ; a defaut, on redetecte, mais sans jamais
+    # rien installer ici : demarrer n'est pas le moment de telecharger PHP.
+    $outils = Lire-Outils $racine
+    if (-not $outils -or -not (Test-Path $outils.Php) -or -not (Test-Path $outils.Npm)) {
+        $outils = Resoudre-Outils -Racine $racine
     }
+    if ($outils.PhpLocal) { $env:PHPRC = $outils.DossierPhp }
 
     Write-Host ""
     Write-Host "  Onélé — démarrage" -ForegroundColor White
     Write-Host "  -----------------" -ForegroundColor DarkGray
 
     # ------------------------------------------------------ Les trois services
-    Start-Process -FilePath 'php' -ArgumentList 'artisan','serve','--port=8000' -WorkingDirectory $backend
+    Start-Process -FilePath $outils.Php -ArgumentList 'artisan','serve','--port=8000' -WorkingDirectory $backend
     Note 'API Laravel      : port 8000'
 
-    Start-Process -FilePath 'php' -ArgumentList 'artisan','reverb:start' -WorkingDirectory $backend
+    Start-Process -FilePath $outils.Php -ArgumentList 'artisan','reverb:start' -WorkingDirectory $backend
     Note 'Serveur Reverb   : port 8080'
 
-    Start-Process -FilePath $npm.Source -ArgumentList 'run','dev' -WorkingDirectory $web
+    Start-Process -FilePath $outils.Npm -ArgumentList 'run','dev' -WorkingDirectory $web
     Note 'Espace admin     : port 5173'
 
     # ----------------------------------------------------------- On attend l'API

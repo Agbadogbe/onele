@@ -21,3 +21,6 @@ backend/public/build/
 backend/storage/*.key
 backend/storage/logs/*.log
 backend/.phpunit.result.cache
+
+# Outils téléchargés automatiquement par setup (PHP, Node, Composer)
+tools/

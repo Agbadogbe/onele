@@ -33,9 +33,10 @@ millisecondes, et inversement (voir [Temps réel](#temps-réel)).
 
 ## Démarrage rapide
 
-Deux commandes, sur n'importe quel système. **Aucun serveur de base de données à
-installer** : Onélé tourne par défaut sur SQLite, c'est-à-dire un simple fichier
-créé automatiquement.
+Deux commandes, sur n'importe quel système. **Sous Windows, il n'y a rien à
+installer au préalable** : `setup.bat` télécharge lui-même ce qui manque. Et
+aucun serveur de base de données nulle part — Onélé tourne sur SQLite, c'est-à-dire
+un simple fichier créé automatiquement.
 
 **Windows** — le plus simple est le double-clic depuis l'Explorateur. Dans un
 terminal, la commande dépend duquel :
@@ -76,6 +77,33 @@ ce qui manque et ne recrée pas les données de démonstration.
 
 ### Ce qu'il faut avoir avant
 
+#### Sous Windows : rien
+
+`setup.bat` inspecte la machine et **installe lui-même ce qui manque** — PHP,
+Node et Composer — dans le dossier `tools\` du dépôt. Il le fait aussi quand les
+versions déjà présentes sont trop anciennes : un PHP 8.2, celui de XAMPP par
+exemple, est ignoré au profit de celui qu'Onélé télécharge.
+
+Trois propriétés de ce mécanisme méritent d'être dites :
+
+- **rien n'est installé dans le système** — pas de `Program Files`, pas de
+  registre, pas de `PATH` modifié ; supprimer le dossier du projet ne laisse
+  aucune trace ;
+- **aucun droit administrateur** n'est demandé ;
+- **rien n'est cassé** : une installation PHP ou Node déjà en place continue de
+  fonctionner exactement comme avant, Onélé ne l'utilise simplement pas.
+
+Comptez environ 70 Mo de téléchargement la première fois, une seule fois.
+
+Reste **Flutter**, uniquement pour l'application mobile, et uniquement si vous
+voulez la lancer : trop volumineux pour être téléchargé ainsi. Sans lui, le web
+et l'API fonctionnent normalement.
+
+#### Sous macOS / Linux
+
+Là, les outils sont attendus sur la machine — ils s'y installent en une commande
+avec `brew` ou le gestionnaire de paquets de la distribution :
+
 | Outil | Version | Pour quoi |
 |---|---|---|
 | **PHP** | 8.3 ou plus, extension `pdo_sqlite` active | l'API |
@@ -83,22 +111,9 @@ ce qui manque et ne recrée pas les données de démonstration.
 | **Node.js** | 20 ou plus | l'espace d'administration |
 | **Flutter** | canal stable, Dart 3.13+ | l'application mobile — *facultatif* |
 
-`setup` vérifie chacun de ces points **avant** de commencer et indique quoi
-installer, avec le lien, si l'un manque. Sous Windows, pensez à rouvrir un
-terminal après une installation : le `PATH` n'est lu qu'au démarrage.
-
-La version de PHP n'est pas négociable : **8.3 est le minimum de Laravel 13**,
-pas une exigence d'Onélé. Un PHP 8.2 déjà installé — celui de XAMPP, souvent —
-ne conviendra pas. Sous Windows :
-
-1. Téléchargez le ZIP **« Non Thread Safe »** de PHP 8.3 ou 8.4 sur
-   [windows.php.net/download](https://windows.php.net/download) et décompressez-le
-   dans `C:\php`.
-2. Dans ce dossier, copiez `php.ini-development` en `php.ini`, puis décommentez-y
-   au minimum `extension=pdo_sqlite`, `extension=mbstring`, `extension=fileinfo`,
-   `extension=openssl` et `extension=curl` (retirez le `;` de début de ligne).
-3. Ajoutez `C:\php` au `PATH`, **avant** l'éventuel ancien PHP, puis rouvrez le
-   terminal. `php -v` doit annoncer 8.3 ou plus.
+`./scripts/setup.sh` vérifie chacun de ces points **avant** de commencer et
+indique quoi installer, avec le lien, si l'un manque. Le minimum de PHP n'est pas
+une exigence d'Onélé : c'est celui de Laravel 13.
 
 ### Puis l'application mobile
 
@@ -422,8 +437,9 @@ apparaît en tête du tableau des RH.
 
 | Symptôme | Cause la plus fréquente | Quoi faire |
 |---|---|---|
-| `'php' n'est pas reconnu…` | PHP absent du `PATH`, ou terminal ouvert avant l'installation | Rouvrez un terminal ; le `PATH` n'est lu qu'au démarrage. |
-| `could not find driver` | l'extension `pdo_sqlite` est commentée dans `php.ini` | Décommentez `extension=pdo_sqlite` puis relancez. |
+| `VCRUNTIME140.dll est introuvable` sous Windows | le PHP téléchargé a besoin de la bibliothèque Visual C++ | Installez [vc_redist.x64.exe](https://aka.ms/vs/17/release/vc_redist.x64.exe) puis relancez `setup.bat`. |
+| `'php' n'est pas reconnu…` | macOS/Linux : PHP absent du `PATH`, ou terminal ouvert avant l'installation | Rouvrez un terminal ; le `PATH` n'est lu qu'au démarrage. (Sous Windows, `setup.bat` s'en charge seul.) |
+| `could not find driver` | macOS/Linux : l'extension `pdo_sqlite` est commentée dans `php.ini` | Décommentez `extension=pdo_sqlite` puis relancez. |
 | Le `.ps1` refuse de démarrer | politique d'exécution PowerShell | Passez par `setup.bat` / `start.bat`, qui la contournent proprement. |
 | `setup.bat n'est pas reconnu…` sous PowerShell | PowerShell ne lance rien depuis le dossier courant sans préfixe | Tapez `.\setup.bat` (avec le `.\`), ou passez par l'Explorateur. |
 | `Accès refusé` / `Permission denied` pendant l'installation | dépôt cloné dans un dossier protégé, `C:\Windows\System32` typiquement | Déplacez-le dans votre dossier personnel, puis relancez. |
