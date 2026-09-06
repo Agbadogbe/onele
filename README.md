@@ -87,6 +87,19 @@ ce qui manque et ne recrée pas les données de démonstration.
 installer, avec le lien, si l'un manque. Sous Windows, pensez à rouvrir un
 terminal après une installation : le `PATH` n'est lu qu'au démarrage.
 
+La version de PHP n'est pas négociable : **8.3 est le minimum de Laravel 13**,
+pas une exigence d'Onélé. Un PHP 8.2 déjà installé — celui de XAMPP, souvent —
+ne conviendra pas. Sous Windows :
+
+1. Téléchargez le ZIP **« Non Thread Safe »** de PHP 8.3 ou 8.4 sur
+   [windows.php.net/download](https://windows.php.net/download) et décompressez-le
+   dans `C:\php`.
+2. Dans ce dossier, copiez `php.ini-development` en `php.ini`, puis décommentez-y
+   au minimum `extension=pdo_sqlite`, `extension=mbstring`, `extension=fileinfo`,
+   `extension=openssl` et `extension=curl` (retirez le `;` de début de ligne).
+3. Ajoutez `C:\php` au `PATH`, **avant** l'éventuel ancien PHP, puis rouvrez le
+   terminal. `php -v` doit annoncer 8.3 ou plus.
+
 ### Puis l'application mobile
 
 Dans un quatrième terminal, une fois `start` en route :

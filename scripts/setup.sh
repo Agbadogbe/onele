@@ -38,7 +38,9 @@ if [ -z "$version_php" ]; then
   exit 1
 fi
 if [ "$(printf '%s\n8.3\n' "$version_php" | sort -V | head -1)" != "8.3" ]; then
-  printf '\n\033[31m  PHP %s est trop ancien : il en faut 8.3 au minimum.\033[0m\n\n' "$version_php"
+  printf '\n\033[31m  PHP %s est trop ancien : il en faut 8.3 au minimum.\n' "$version_php"
+  printf '  C'"'"'est Laravel, le socle de l'"'"'API, qui l'"'"'exige.\033[0m\n\n'
+  printf '\033[90m  Celui qui répond ici : %s\033[0m\n\n' "$(command -v php)"
   exit 1
 fi
 bien "PHP $version_php"

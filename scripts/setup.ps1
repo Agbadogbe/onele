@@ -56,6 +56,14 @@ try {
     if ($versionPhp -lt [version]'8.3') {
         Write-Host ""
         Write-Host "  PHP $versionPhp est trop ancien : il en faut 8.3 au minimum." -ForegroundColor Red
+        Write-Host "  C'est Laravel, le socle de l'API, qui l'exige." -ForegroundColor Red
+        Write-Host ""
+        Write-Host "  Celui qui repond ici : $((Get-Command php).Source)" -ForegroundColor DarkGray
+        Write-Host ""
+        Write-Host "  Prenez le ZIP « Non Thread Safe » de PHP 8.4 sur :" -ForegroundColor Red
+        Write-Host "      https://windows.php.net/download" -ForegroundColor Yellow
+        Write-Host "  Decompressez-le, copiez php.ini-development en php.ini, decommentez-y" -ForegroundColor Red
+        Write-Host "  extension=pdo_sqlite, puis remplacez l'ancien dossier PHP dans le PATH." -ForegroundColor Red
         Write-Host ""
         exit 1
     }
