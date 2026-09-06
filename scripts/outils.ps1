@@ -513,3 +513,63 @@ git est introuvable, et Flutter ne fonctionne pas sans lui.
     Bien "Flutter $($sonde.Version) (fourni avec le projet)"
     return $sonde.Chemin
 }
+
+# ------------------------------------------------------------ Cibles & ports
+
+function Port-Ouvert([int]$port) {
+    # Vite ecoute parfois en IPv6 seulement : on interroge les deux boucles
+    # locales, sans quoi on croirait le port libre et on lancerait un doublon.
+    foreach ($hote in @('127.0.0.1', '::1')) {
+        try {
+            $client = New-Object System.Net.Sockets.TcpClient
+            $tache = $client.ConnectAsync($hote, $port)
+            $joint = $tache.Wait(400)
+            $client.Close()
+            if ($joint) { return $true }
+        } catch {
+            # Connexion refusee : ce port-la est libre.
+        }
+    }
+    return $false
+}
+
+function Resoudre-Navigateur {
+    # Flutter web veut Chrome. Beaucoup de machines Windows n'ont qu'Edge, qui
+    # fait tres bien l'affaire : il suffit de le lui designer.
+    if (Get-Command 'chrome' -ErrorAction SilentlyContinue) { return $null }
+    $pistes = @(
+        "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
+        "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",
+        "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe"
+    )
+    foreach ($piste in $pistes) { if (Test-Path $piste) { return $null } }
+
+    $edges = @(
+        "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe",
+        "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe"
+    )
+    foreach ($edge in $edges) {
+        if (Test-Path $edge) {
+            $env:CHROME_EXECUTABLE = $edge
+            return $edge
+        }
+    }
+    return $null
+}
+
+function Choisir-Cible([string]$flutter) {
+    # --machine donne du JSON : plus sur que de lire un tableau destine a l'oeil.
+    try {
+        $appareils = (& $flutter devices --machine | Out-String) | ConvertFrom-Json
+    } catch {
+        return @{ Id = 'chrome'; Nom = 'navigateur' }
+    }
+
+    $telephone = $appareils | Where-Object { $_.targetPlatform -like 'android*' -and -not $_.emulator } | Select-Object -First 1
+    if ($telephone) { return @{ Id = $telephone.id; Nom = "$($telephone.name) (téléphone branché)" } }
+
+    $emulateur = $appareils | Where-Object { $_.emulator } | Select-Object -First 1
+    if ($emulateur) { return @{ Id = $emulateur.id; Nom = "$($emulateur.name) (émulateur)" } }
+
+    return @{ Id = 'chrome'; Nom = 'navigateur' }
+}

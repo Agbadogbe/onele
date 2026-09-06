@@ -33,47 +33,64 @@ millisecondes, et inversement (voir [Temps réel](#temps-réel)).
 
 ## Démarrage rapide
 
-Deux commandes, sur n'importe quel système. **Sous Windows, il n'y a rien à
-installer au préalable** : `setup.bat` télécharge lui-même ce qui manque. Et
-aucun serveur de base de données nulle part — Onélé tourne sur SQLite, c'est-à-dire
-un simple fichier créé automatiquement.
+**Sous Windows, une seule commande, et rien à installer au préalable** :
+`onele.bat` télécharge lui-même ce qui manque. Et aucun serveur de base de
+données nulle part — Onélé tourne sur SQLite, c'est-à-dire un simple fichier
+créé automatiquement.
 
-**Windows** — le plus simple est le double-clic depuis l'Explorateur. Dans un
-terminal, la commande dépend duquel :
+**Windows** — une seule commande, qui installe ce qui manque puis lance tout,
+le mobile compris. Le plus simple est le double-clic sur `onele.bat` depuis
+l'Explorateur. Dans un terminal :
 
 ```powershell
-# PowerShell — le préfixe .\ est obligatoire
-.\setup.bat
-.\start.bat
+.\onele.bat        # PowerShell : le préfixe .\ est obligatoire
 ```
 
 ```bat
-REM Invite de commandes (cmd.exe)
-setup.bat
-start.bat
+onele.bat          REM Invite de commandes (cmd.exe)
 ```
 
 PowerShell refuse par sécurité de lancer un programme du dossier courant sans ce
 `.\` : sans lui, il répond « le terme n'est pas reconnu ».
 
-Clonez le dépôt dans **votre dossier personnel** — `C:\Users\vous\onele` par
-exemple — et surtout pas dans `C:\Windows\System32` : ce dossier est protégé en
-écriture et l'installation y échouerait.
+Elle est rejouable sans dommage : ce qui est déjà installé n'est pas réinstallé,
+et un service déjà en route n'est pas lancé deux fois.
+
+#### Où cloner, sous Windows
+
+Deux contraintes, faciles à respecter d'un coup :
+
+- **pas dans `C:\Windows\System32`** — protégé en écriture ; c'est le dossier où
+  atterrit un PowerShell ouvert en administrateur, d'où l'erreur classique ;
+- **un chemin court**. L'archive Flutter contient un chemin de 204 caractères et
+  Windows plafonne à 260 : il reste 56 caractères pour le dossier du projet.
+  `C:\Users\vous\onele` en consomme 20, tout va bien ; un clone dans
+  `OneDrive\Documents\GitHub\...` dépasserait. Le script le vérifie **avant** de
+  télécharger et le dit, plutôt que d'échouer après 1,8 Go.
+
+En pratique, `C:\Users\vous\onele` ou `C:\onele` conviennent parfaitement.
 
 **macOS / Linux** :
 
 ```bash
-./scripts/setup.sh
-./scripts/start.sh
+./scripts/onele.sh
 ```
+
+Là, l'application mobile se lance à part : `cd mobile && flutter run`.
+
+### Si vous préférez les étapes séparées
+
+| | Windows | macOS / Linux |
+|---|---|---|
+| Installer seulement | `.\setup.bat` | `./scripts/setup.sh` |
+| Démarrer le web | `.\start.bat` | `./scripts/start.sh` |
+| Lancer le mobile | `.\mobile.bat` | `cd mobile && flutter run` |
 
 `setup` installe les dépendances des trois composants, écrit les fichiers `.env`,
 crée la base et y charge le jeu de démonstration. `start` lance l'API, le serveur
 temps réel et l'espace d'administration, chacun dans sa fenêtre, puis ouvre
-`http://localhost:5173`.
-
-Les deux scripts sont rejouables sans dommage : `setup` relancé ne réinstalle que
-ce qui manque et ne recrée pas les données de démonstration.
+`http://localhost:5173`. Tous sont rejouables sans dommage : rien n'est
+réinstallé deux fois, et les données de démonstration ne sont pas recréées.
 
 ### Ce qu'il faut avoir avant
 
