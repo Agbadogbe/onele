@@ -15,6 +15,13 @@ $PHP_REPLI    = 'php-8.4.25-nts-Win32-vs17-x64.zip'
 $NODE_MINIMUM = 20
 $NODE_REPLI   = 'v24.20.0'
 
+# Le chemin le plus long de l'archive Flutter, mesure dans son catalogue :
+# flutter\engine\src\flutter\testing\ios_scenario_app\... (une image de test iOS).
+# Windows plafonne a 260 caracteres, d'ou la verification avant tout
+# telechargement : echouer apres 1,8 Go serait inacceptable.
+$FLUTTER_CHEMIN_MAX = 204
+$WINDOWS_CHEMIN_MAX = 260
+
 # ------------------------------------------------------------------ Affichage
 
 function Etape([string]$texte)  { Write-Host "`n== $texte" -ForegroundColor Cyan }
@@ -63,6 +70,19 @@ function Dezipper([string]$archive, [string]$vers) {
     } catch {
         # Repli sur l'applet, plus lente mais toujours disponible.
         Expand-Archive -Path $archive -DestinationPath $vers -Force
+    }
+}
+
+function Dezipper-Dans([string]$archive, [string]$dossier) {
+    # Variante qui verse dans un dossier existant sans le vider : utile quand
+    # l'archive porte deja son propre dossier racine et qu'on veut eviter le
+    # detour par un dossier temporaire, couteux en longueur de chemin.
+    New-Item -ItemType Directory -Force -Path $dossier | Out-Null
+    try {
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        [System.IO.Compression.ZipFile]::ExtractToDirectory($archive, $dossier)
+    } catch {
+        Expand-Archive -Path $archive -DestinationPath $dossier -Force
     }
 }
 
@@ -416,6 +436,26 @@ function Adresse-Flutter {
 
 function Installer-Flutter([string]$dossier) {
     Preparer-Reseau
+
+    # L'archive est versee directement dans tools\, dont elle porte deja le
+    # sous-dossier « flutter » : pas de dossier intermediaire, donc 54
+    # caracteres de chemin economises sur une marge qui n'en compte que 56.
+    $accueil = Split-Path -Parent $dossier
+    $budget = $accueil.Length + 1 + $FLUTTER_CHEMIN_MAX
+    if ($budget -gt ($WINDOWS_CHEMIN_MAX - 10)) {
+        throw @"
+le dossier du projet est trop profond pour Flutter.
+
+    Windows refuse les chemins de plus de $WINDOWS_CHEMIN_MAX caracteres, et l'archive
+    Flutter en contient un de $FLUTTER_CHEMIN_MAX. Depuis
+        $accueil
+    on arriverait a $budget.
+
+    Reclonez le depot plus pres de la racine — C:\onele par exemple — puis
+    relancez setup.bat et mobile.bat.
+"@
+    }
+
     $choix = Adresse-Flutter
     Write-Host ""
     Alerte "Flutter $($choix.Version) va être téléchargé : environ 1,8 Go."
@@ -427,12 +467,10 @@ function Installer-Flutter([string]$dossier) {
     Telecharger @($choix.Adresse) $zip
 
     Note 'Décompression (comptez quelques minutes)…'
-    # L'archive porte un dossier « flutter » a sa racine : on le remonte.
-    $intermediaire = Join-Path $env:TEMP ("onele-flutter-" + [guid]::NewGuid().ToString('N'))
-    Dezipper $zip $intermediaire
+    # Les 23 071 entrees de l'archive sont toutes sous « flutter/ » : la verser
+    # dans tools\ produit exactement tools\flutter, sans rien eparpiller.
     if (Test-Path $dossier) { Remove-Item -Recurse -Force $dossier }
-    Move-Item -Path (Join-Path $intermediaire 'flutter') -Destination $dossier
-    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $intermediaire
+    Dezipper-Dans $zip $accueil
     Remove-Item -Force -ErrorAction SilentlyContinue $zip
 }
 
