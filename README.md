@@ -95,9 +95,10 @@ Trois propriétés de ce mécanisme méritent d'être dites :
 
 Comptez environ 70 Mo de téléchargement la première fois, une seule fois.
 
-Reste **Flutter**, uniquement pour l'application mobile, et uniquement si vous
-voulez la lancer : trop volumineux pour être téléchargé ainsi. Sans lui, le web
-et l'API fonctionnent normalement.
+**Flutter** est traité à part, dans `mobile.bat` : l'archive pèse 1,8 Go, on ne
+l'impose donc pas à qui veut seulement voir l'espace d'administration. Le
+mécanisme est le même — téléchargement automatique dans `tools\`, rien dans le
+système.
 
 #### Sous macOS / Linux
 
@@ -117,16 +118,24 @@ une exigence d'Onélé : c'est celui de Laravel 13.
 
 ### Puis l'application mobile
 
-Dans un quatrième terminal, une fois `start` en route :
+Une fois `start` en route, dans un quatrième terminal :
 
-```bash
-cd mobile
-flutter run -d chrome      # le plus simple : aucun émulateur à installer
+```powershell
+.\mobile.bat          REM Windows
 ```
 
-Pour la voir sur un vrai téléphone, ouvrez un émulateur Android (ou un
-simulateur iOS sur Mac) et lancez `flutter run` : l'adresse de l'API s'adapte
-seule à la plateforme.
+```bash
+cd mobile && flutter run    # macOS / Linux
+```
+
+`mobile.bat` installe Flutter s'il manque, puis choisit sa cible tout seul :
+un téléphone Android branché en USB s'il y en a un, sinon un émulateur déjà
+démarré, sinon Chrome. L'adresse de l'API s'adapte à la plateforme —
+`10.0.2.2` depuis un émulateur Android, `127.0.0.1` ailleurs.
+
+Sur un **vrai téléphone**, il faut en plus remplacer l'hôte par l'IP locale de
+la machine dans `mobile/lib/services/api_client.dart` : le téléphone et le PC ne
+partagent pas `127.0.0.1`.
 
 ---
 
@@ -137,7 +146,7 @@ seule à la plateforme.
 | `backend/` | API REST, authentification, diffusion, base de données | Laravel 13, PHP 8.3+, SQLite ou MySQL, Reverb |
 | `web/`     | Interface d'administration (RH / Admin)             | React 19, Vite            |
 | `mobile/`  | Application employé (congés, permissions, matériel) | Flutter (Dart 3.13+)      |
-| `scripts/` | Installation et démarrage, Windows et Unix          | PowerShell, Bash          |
+| `scripts/` | Installation, démarrage et mobile, Windows et Unix   | PowerShell, Bash          |
 
 ## Comptes de démonstration
 

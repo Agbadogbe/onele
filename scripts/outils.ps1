@@ -377,3 +377,101 @@ function Lire-Outils([string]$Racine) {
         return $null
     }
 }
+
+# -------------------------------------------------------------------- Flutter
+
+function Sonder-Flutter([string]$exe) {
+    if (-not $exe -or -not (Test-Path $exe)) { return $null }
+    try {
+        $sortie = (& $exe --version --machine | Out-String)
+    } catch {
+        return $null
+    }
+    if ($sortie -notmatch '"frameworkVersion"\s*:\s*"([^"]+)"') { return $null }
+    return [pscustomobject]@{ Chemin = $exe; Version = $Matches[1] }
+}
+
+function Adresse-Flutter {
+    # Le catalogue officiel donne l'archive stable du moment ; a defaut, on
+    # retombe sur une version connue.
+    try {
+        $catalogue = Invoke-RestMethod -Uri 'https://storage.googleapis.com/flutter_infra_release/releases/releases_windows.json' -UseBasicParsing -TimeoutSec 30
+        $empreinte = $catalogue.current_release.stable
+        foreach ($sortie in $catalogue.releases) {
+            if ($sortie.hash -eq $empreinte -and $sortie.channel -eq 'stable') {
+                return @{
+                    Adresse = ($catalogue.base_url + '/' + $sortie.archive)
+                    Version = $sortie.version
+                }
+            }
+        }
+    } catch {
+        # Catalogue injoignable.
+    }
+    return @{
+        Adresse = 'https://storage.googleapis.com/flutter_infra_release/releases/stable/windows/flutter_windows_3.47.2-stable.zip'
+        Version = '3.47.2'
+    }
+}
+
+function Installer-Flutter([string]$dossier) {
+    Preparer-Reseau
+    $choix = Adresse-Flutter
+    Write-Host ""
+    Alerte "Flutter $($choix.Version) va être téléchargé : environ 1,8 Go."
+    Note   'C''est long — dix à trente minutes selon la connexion — mais une seule fois.'
+    Note   'Comme le reste, il atterrit dans tools\ et ne touche rien sur la machine.'
+    Write-Host ""
+
+    $zip = Join-Path $env:TEMP 'flutter-windows.zip'
+    Telecharger @($choix.Adresse) $zip
+
+    Note 'Décompression (comptez quelques minutes)…'
+    # L'archive porte un dossier « flutter » a sa racine : on le remonte.
+    $intermediaire = Join-Path $env:TEMP ("onele-flutter-" + [guid]::NewGuid().ToString('N'))
+    Dezipper $zip $intermediaire
+    if (Test-Path $dossier) { Remove-Item -Recurse -Force $dossier }
+    Move-Item -Path (Join-Path $intermediaire 'flutter') -Destination $dossier
+    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $intermediaire
+    Remove-Item -Force -ErrorAction SilentlyContinue $zip
+}
+
+function Resoudre-Flutter {
+    param(
+        [Parameter(Mandatory = $true)][string]$Racine,
+        [switch]$Installer
+    )
+
+    $dossier = Join-Path $Racine 'tools\flutter'
+    $local   = Join-Path $dossier 'bin\flutter.bat'
+
+    $systeme = Get-Command 'flutter' -ErrorAction SilentlyContinue
+    if ($systeme) {
+        $sonde = Sonder-Flutter $systeme.Source
+        if ($sonde) { Bien "Flutter $($sonde.Version)"; return $sonde.Chemin }
+    }
+
+    if (Test-Path $local) {
+        $sonde = Sonder-Flutter $local
+        if ($sonde) { Bien "Flutter $($sonde.Version) (fourni avec le projet)"; return $sonde.Chemin }
+    }
+
+    if (-not $Installer) { return $null }
+
+    # Flutter s'appuie sur git pour connaitre sa propre version : sans lui,
+    # l'archive se decompresse mais aucune commande ne repond.
+    if (-not (Get-Command 'git' -ErrorAction SilentlyContinue)) {
+        throw @'
+git est introuvable, et Flutter ne fonctionne pas sans lui.
+
+    Installez-le ici, puis relancez :
+        https://git-scm.com/download/win
+'@
+    }
+
+    Installer-Flutter $dossier
+    $sonde = Sonder-Flutter $local
+    if (-not $sonde) { throw 'le Flutter installe dans tools\flutter ne repond pas.' }
+    Bien "Flutter $($sonde.Version) (fourni avec le projet)"
+    return $sonde.Chemin
+}
