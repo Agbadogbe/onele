@@ -1,0 +1,26 @@
+# Fins de ligne normalisées à la mise en dépôt. Sans cette règle, un clone
+# Windows peut convertir les scripts shell en CRLF et bash refuse alors de
+# les exécuter (« bad interpreter: /usr/bin/env bash^M »).
+* text=auto eol=lf
+
+# Les scripts Windows, eux, sont attendus en CRLF.
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+*.ps1  text eol=crlf
+
+# Les scripts Unix restent en LF quel que soit le système de clonage.
+*.sh   text eol=lf
+
+# Binaires : aucune conversion.
+*.ttf  binary
+*.otf  binary
+*.png  binary
+*.jpg  binary
+*.ico  binary
+*.sqlite binary
+
+# Coloration des diffs.
+*.php   diff=php
+*.css   diff=css
+*.html  diff=html
+*.md    diff=markdown

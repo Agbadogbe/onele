@@ -23,24 +23,82 @@ Trois composants, une seule API :
                    │    (Sanctum auth)    │
                    └──────────┬───────────┘
                               ▼
-                     MySQL (onele)
+              SQLite — un fichier, rien à installer
+                  (MySQL en option, voir plus bas)
 ```
 
 Les deux clients gardent une liaison WebSocket ouverte : une décision prise dans
 l'espace web arrive sur le téléphone de l'employé en quelques dizaines de
 millisecondes, et inversement (voir [Temps réel](#temps-réel)).
 
+## Démarrage rapide
+
+Deux commandes, sur n'importe quel système. **Aucun serveur de base de données à
+installer** : Onélé tourne par défaut sur SQLite, c'est-à-dire un simple fichier
+créé automatiquement.
+
+**Windows** — depuis l'Explorateur (double-clic) ou une invite de commandes :
+
+```
+setup.bat
+start.bat
+```
+
+**macOS / Linux** :
+
+```bash
+./scripts/setup.sh
+./scripts/start.sh
+```
+
+`setup` installe les dépendances des trois composants, écrit les fichiers `.env`,
+crée la base et y charge le jeu de démonstration. `start` lance l'API, le serveur
+temps réel et l'espace d'administration, chacun dans sa fenêtre, puis ouvre
+`http://localhost:5173`.
+
+Les deux scripts sont rejouables sans dommage : `setup` relancé ne réinstalle que
+ce qui manque et ne recrée pas les données de démonstration.
+
+### Ce qu'il faut avoir avant
+
+| Outil | Version | Pour quoi |
+|---|---|---|
+| **PHP** | 8.3 ou plus, extension `pdo_sqlite` active | l'API |
+| **Composer** | 2 | les dépendances PHP |
+| **Node.js** | 20 ou plus | l'espace d'administration |
+| **Flutter** | canal stable, Dart 3.13+ | l'application mobile — *facultatif* |
+
+`setup` vérifie chacun de ces points **avant** de commencer et indique quoi
+installer, avec le lien, si l'un manque. Sous Windows, pensez à rouvrir un
+terminal après une installation : le `PATH` n'est lu qu'au démarrage.
+
+### Puis l'application mobile
+
+Dans un quatrième terminal, une fois `start` en route :
+
+```bash
+cd mobile
+flutter run -d chrome      # le plus simple : aucun émulateur à installer
+```
+
+Pour la voir sur un vrai téléphone, ouvrez un émulateur Android (ou un
+simulateur iOS sur Mac) et lancez `flutter run` : l'adresse de l'API s'adapte
+seule à la plateforme.
+
+---
+
 ## Structure du dépôt
 
 | Dossier    | Rôle                                              | Stack                    |
 |------------|----------------------------------------------------|---------------------------|
-| `backend/` | API REST, authentification, diffusion, base de données | Laravel 13, PHP 8.5, MySQL, Reverb |
+| `backend/` | API REST, authentification, diffusion, base de données | Laravel 13, PHP 8.3+, SQLite ou MySQL, Reverb |
 | `web/`     | Interface d'administration (RH / Admin)             | React 19, Vite            |
-| `mobile/`  | Application employé (congés, permissions, matériel) | Flutter 3.47, Dart        |
+| `mobile/`  | Application employé (congés, permissions, matériel) | Flutter (Dart 3.13+)      |
+| `scripts/` | Installation et démarrage, Windows et Unix          | PowerShell, Bash          |
 
 ## Comptes de démonstration
 
-Après le seed de la base (`php artisan migrate:fresh --seed`) :
+Chargés par `setup` (ou `php artisan onele:installer`) :
 
 | Rôle    | Email                             | Mot de passe |
 |---------|-----------------------------------|--------------|
@@ -56,53 +114,70 @@ L'app **web** n'accepte que les comptes `admin` / `rh`. L'app **mobile** est ré
 
 ## 1. Backend (API Laravel)
 
+> Le [démarrage rapide](#démarrage-rapide) fait tout ceci pour vous. Cette
+> section décrit ce qui se passe dessous, et comment s'en écarter.
+
 ### Prérequis
-- PHP 8.5+, Composer
-- MySQL 8+
+- PHP 8.3+ avec l'extension `pdo_sqlite` (livrée activée dans les paquets
+  officiels Windows, macOS et Linux)
+- Composer 2
 
 ### Installation
 
 ```bash
 cd backend
 composer install
-cp .env.example .env   # puis vérifier DB_* (voir ci-dessous)
-php artisan key:generate
+php artisan onele:installer
 ```
 
-Dans `.env`, la base attendue :
+`onele:installer` fait tout le reste, et sait qu'on peut le relancer :
 
-```
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=onele
-DB_USERNAME=root
-DB_PASSWORD=
+- crée `.env` depuis `.env.example` s'il manque ;
+- génère `APP_KEY` si elle est vide ;
+- crée le fichier SQLite `database/database.sqlite` ;
+- joue les migrations ;
+- charge le jeu de démonstration **uniquement si la base est vide**.
+
+Pour repartir de zéro : `php artisan onele:installer --fresh`.
+
+### Travailler sur MySQL à la place
+
+SQLite est le défaut parce qu'il ne demande aucune installation. Pour MySQL,
+décommentez le bloc `DB_*` de `backend/.env`, remplacez la première ligne par
+`DB_CONNECTION=mysql`, puis :
+
+```bash
+mysql -u root -e "CREATE DATABASE onele CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+php artisan onele:installer --fresh
 ```
 
-Et, pour le temps réel, les identifiants du serveur WebSocket (déjà présents
-dans `.env.example`) :
+Rien d'autre ne change : les requêtes d'agrégation du tableau de bord sont
+écrites pour tourner à l'identique sur les deux moteurs, et la suite de tests
+s'exécute sur SQLite.
+
+### Temps réel
+
+Les identifiants du serveur WebSocket sont déjà dans `.env.example` :
 
 ```
 BROADCAST_CONNECTION=reverb
 REVERB_APP_ID=100000
 REVERB_APP_KEY=onele-dev-key
 REVERB_APP_SECRET=onele-dev-secret
-REVERB_HOST="localhost"
+REVERB_HOST=127.0.0.1        # et non « localhost » : voir ci-dessous
 REVERB_PORT=8080
 REVERB_SCHEME=http
+REVERB_SERVER_HOST=0.0.0.0
+REVERB_SERVER_PORT=8080
 ```
+
+`REVERB_HOST` est écrit en `127.0.0.1` et non en `localhost` : sous Windows,
+« localhost » se résout d'abord en `::1` alors que Reverb écoute en IPv4, et
+les diffusions échoueraient silencieusement.
 
 `php artisan reverb:install` regénère ces valeurs si besoin — il faut alors les
 reporter dans `web/.env` (`VITE_REVERB_APP_KEY`) et, pour le mobile, les passer
 au lancement : `flutter run --dart-define=REVERB_APP_KEY=…`.
-
-Créer la base puis migrer + peupler avec des données de démo :
-
-```bash
-mysql -u root -e "CREATE DATABASE IF NOT EXISTS onele CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-php artisan migrate:fresh --seed
-```
 
 ### Lancer le serveur
 
@@ -160,13 +235,13 @@ notifications soldées d'un coup).
 
 ```bash
 cd web
+cp .env.example .env
 npm install
 npm run dev
 ```
 
-Application disponible sur `http://localhost:5173`. Copier `web/.env.example` vers
-`web/.env` ; ce fichier porte
-l'adresse de l'API et celle du serveur WebSocket :
+Application disponible sur `http://localhost:5173`. `web/.env` porte l'adresse de
+l'API et celle du serveur WebSocket :
 
 ```
 VITE_API_BASE=http://127.0.0.1:8000/api
@@ -201,8 +276,11 @@ npm run build
 demande, mes informations, mot de passe, appareils connectés.
 
 ### Prérequis
-- Flutter SDK 3.47+
-- Un simulateur iOS, un émulateur Android, ou Chrome (pour un aperçu rapide)
+- Flutter, canal stable (Dart 3.13 ou plus)
+- Chrome, un émulateur Android, ou un simulateur iOS sur Mac
+
+Il n'y a pas de cible Windows de bureau : sous Windows, `flutter run -d chrome`
+est le chemin le plus court — aucun émulateur ni Visual Studio à installer.
 
 ### Installation et lancement
 
@@ -220,7 +298,7 @@ flutter run --dart-define=REVERB_APP_KEY=votre-cle
 ```
 
 L'URL de l'API s'adapte automatiquement à la plateforme (voir `lib/services/api_client.dart`) :
-- iOS Simulator / Chrome / macOS → `http://127.0.0.1:8000/api`
+- Chrome / simulateur iOS / macOS / Windows → `http://127.0.0.1:8000/api`
 - Émulateur Android → `http://10.0.2.2:8000/api` (alias réseau vers l'hôte)
 - **Appareil physique** → remplacer par l'IP réseau locale de la machine qui héberge l'API.
 
@@ -287,6 +365,9 @@ mode requête/réponse ; seules les mises à jour instantanées manquent.
 
 ## Démo rapide (les trois composants ensemble)
 
+Le plus simple reste `start.bat` (Windows) ou `./scripts/start.sh` (macOS,
+Linux), qui ouvre les trois premiers. À la main :
+
 ```bash
 # Terminal 1 — API
 cd backend && php artisan serve --port=8000
@@ -308,6 +389,18 @@ depuis le web une demande appartenant au compte employé connecté sur le mobile
 La bannière et le changement de statut arrivent sur le téléphone sans le
 toucher. Dans l'autre sens, déposez une demande depuis le mobile : la ligne
 apparaît en tête du tableau des RH.
+
+## Si ça coince
+
+| Symptôme | Cause la plus fréquente | Quoi faire |
+|---|---|---|
+| `'php' n'est pas reconnu…` | PHP absent du `PATH`, ou terminal ouvert avant l'installation | Rouvrez un terminal ; le `PATH` n'est lu qu'au démarrage. |
+| `could not find driver` | l'extension `pdo_sqlite` est commentée dans `php.ini` | Décommentez `extension=pdo_sqlite` puis relancez. |
+| Le `.ps1` refuse de démarrer | politique d'exécution PowerShell | Passez par `setup.bat` / `start.bat`, qui la contournent proprement. |
+| `Address already in use` sur 8000, 8080 ou 5173 | un ancien lancement tourne encore | Fermez les fenêtres restées ouvertes, ou changez de port. |
+| L'espace web affiche « Hors ligne » | `php artisan reverb:start` n'est pas lancé | Démarrez-le ; l'application reste utilisable sans, simplement sans direct. |
+| Le mobile ne joint pas l'API depuis un émulateur Android | l'émulateur a son propre `localhost` | Rien à faire : le code bascule seul sur `10.0.2.2`. Sur un **téléphone réel**, remplacez l'hôte par l'IP locale de la machine. |
+| `SQLSTATE… database is locked` | deux processus écrivent en même temps dans SQLite | Rare ici (sessions et cache sont sur fichier). Si cela persiste, passez sur MySQL. |
 
 ## Limites connues
 
