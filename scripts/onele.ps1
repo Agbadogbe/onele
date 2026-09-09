@@ -180,6 +180,18 @@ try {
             Write-Host "      http://${adresseLocale}:$PORT_MOBILE" -ForegroundColor Yellow
             Write-Host "      Aucune installation : l'application s'adresse d'elle-même à ce PC." -ForegroundColor DarkGray
             Write-Host ""
+
+            $ports = @(8000, 8080, $PORT_MOBILE)
+            switch (Regle-PareFeu $ports) {
+                'posee' { Note 'Règle de pare-feu ajoutée pour les réseaux privés.' }
+                'adroits' {
+                    Write-Host "      Si le téléphone n'y arrive pas, c'est le pare-feu." -ForegroundColor DarkGray
+                    Write-Host "      Ouvrez PowerShell en administrateur et collez :" -ForegroundColor DarkGray
+                    Write-Host "      $(Commande-PareFeu $ports)" -ForegroundColor DarkGray
+                    Write-Host ""
+                }
+                default { }
+            }
         }
     } elseif ($mobileLance) {
         Write-Host "  Application mobile — dans sa propre fenêtre" -ForegroundColor Yellow

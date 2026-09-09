@@ -175,14 +175,39 @@ elle s'adresse à `192.168.1.42:8000` pour l'API et à `192.168.1.42:8080` pour 
 temps réel — voir `hoteServeur` dans
 [`mobile/lib/services/api_client.dart`](mobile/lib/services/api_client.dart).
 
-Deux réserves :
+#### Si le téléphone n'y arrive pas
 
-- **Le pare-feu Windows** peut demander l'autorisation au premier démarrage,
-  puisque l'API se met à écouter sur le réseau et plus seulement en local.
-  Répondez oui pour les réseaux privés ; sans cela le téléphone ne verra rien.
-- **N'importe qui sur le même réseau** peut alors ouvrir l'application. Sur un
-  Wi-Fi public, mieux vaut s'abstenir — ce sont des données de démonstration,
-  mais autant le savoir.
+C'est presque toujours le réseau, jamais l'application. Deux causes, dans cet
+ordre de fréquence.
+
+**Le pare-feu Windows.** Il bloque les connexions entrantes par défaut : le PC
+voit l'application, le téléphone non. `onele.bat` pose la règle lui-même s'il
+tourne en administrateur ; sinon il affiche la commande à coller dans un
+PowerShell administrateur :
+
+```powershell
+New-NetFirewallRule -DisplayName 'Onele (developpement)' -Direction Inbound `
+    -Action Allow -Protocol TCP -LocalPort 8000,8080,8090 -Profile Private
+```
+
+**L'isolation client.** Les réseaux d'entreprise, d'école et les Wi-Fi publics
+empêchent les appareils de se joindre entre eux : chacun accède à Internet, mais
+aucun ne voit son voisin. Aucun réglage ne contourne cela.
+
+Le test qui tranche : ouvrez `http://<adresse-du-PC>:8000` sur le téléphone.
+C'est une page HTML de 3 Ko, sans JavaScript — si elle échoue alors que le PC
+l'affiche, le chemin réseau est bloqué. Pensez à taper le **port** : sans lui, le
+navigateur essaie le port 80 et se plaint d'un serveur injoignable.
+
+**La parade universelle : le câble.** Branchez le téléphone au PC en USB et
+activez le partage de connexion. Il n'y a plus que deux appareils sur une liaison
+directe, sans pare-feu ni isolation possible. L'adresse du PC passe en
+`172.20.10.x` — c'est celle-là qu'il faut utiliser. Le Wi-Fi peut rester actif
+pour Internet.
+
+Dernière chose à savoir : quand ça marche, **n'importe qui sur le même réseau**
+peut ouvrir l'application. Ce sont des données de démonstration, mais autant le
+savoir.
 
 *Et non, Expo ne convient pas ici : c'est l'outillage de React Native, alors que
 le mobile d'Onélé est écrit en Flutter. L'adresse ci-dessus rend le même

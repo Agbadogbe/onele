@@ -602,3 +602,51 @@ function Adresse-Locale {
     }
     return $null
 }
+
+function Regle-PareFeu([int[]]$ports) {
+    # Windows bloque par defaut les connexions entrantes : le PC voit
+    # l'application, un telephone du reseau non. Une regle entrante leve cela,
+    # mais elle demande les droits administrateur. Quatre reponses possibles :
+    #   'existe'  la regle est deja posee ;
+    #   'posee'   on vient de la creer ;
+    #   'adroits' il faut une console administrateur ;
+    #   'inconnu' on ne sait pas (applets absentes) : mieux vaut se taire.
+    #
+    # Tout est sous filet : cette fonction est appelee au moment du bilan, et
+    # une erreur ici ne doit pas emporter un demarrage par ailleurs reussi.
+    $nom = 'Onele (developpement)'
+
+    if (-not (Get-Command 'Get-NetFirewallRule' -ErrorAction SilentlyContinue) -or
+        -not (Get-Command 'New-NetFirewallRule' -ErrorAction SilentlyContinue)) {
+        return 'inconnu'
+    }
+
+    try {
+        if (Get-NetFirewallRule -DisplayName $nom -ErrorAction SilentlyContinue) { return 'existe' }
+    } catch {
+        return 'inconnu'
+    }
+
+    $administrateur = $false
+    try {
+        $identite = [Security.Principal.WindowsIdentity]::GetCurrent()
+        $principal = New-Object Security.Principal.WindowsPrincipal($identite)
+        $administrateur = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    } catch {
+        return 'inconnu'
+    }
+    if (-not $administrateur) { return 'adroits' }
+
+    try {
+        New-NetFirewallRule -DisplayName $nom -Direction Inbound -Action Allow `
+                            -Protocol TCP -LocalPort $ports -Profile Private -ErrorAction Stop | Out-Null
+        return 'posee'
+    } catch {
+        return 'adroits'
+    }
+}
+
+function Commande-PareFeu([int[]]$ports) {
+    $liste = $ports -join ','
+    return "New-NetFirewallRule -DisplayName 'Onele (developpement)' -Direction Inbound -Action Allow -Protocol TCP -LocalPort $liste -Profile Private"
+}
