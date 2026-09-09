@@ -30,6 +30,17 @@ try {
         exit 1
     }
 
+    if (Port-Ouvert $PORT_MOBILE) {
+        $adresse = Adresse-Locale
+        Write-Host ""
+        Bien "L'application mobile tourne déjà sur le port $PORT_MOBILE."
+        Note "Sur ce PC          http://localhost:$PORT_MOBILE"
+        if ($adresse) { Note "Sur un téléphone   http://${adresse}:$PORT_MOBILE" }
+        Note 'Fermez sa fenêtre avant de relancer si vous voulez repartir de zéro.'
+        Write-Host ""
+        exit 0
+    }
+
     Etape 'Outils'
     $flutter = Resoudre-Flutter -Racine $racine -Installer
 

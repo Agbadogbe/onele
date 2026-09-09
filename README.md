@@ -528,7 +528,7 @@ apparaît en tête du tableau des RH.
 | Le `.ps1` refuse de démarrer | politique d'exécution PowerShell | Passez par `setup.bat` / `start.bat`, qui la contournent proprement. |
 | `setup.bat n'est pas reconnu…` sous PowerShell | PowerShell ne lance rien depuis le dossier courant sans préfixe | Tapez `.\setup.bat` (avec le `.\`), ou passez par l'Explorateur. |
 | `Accès refusé` / `Permission denied` pendant l'installation | dépôt cloné dans un dossier protégé, `C:\Windows\System32` typiquement | Déplacez-le dans votre dossier personnel, puis relancez. |
-| `Address already in use` sur 8000, 8080 ou 5173 | un ancien lancement tourne encore | Fermez les fenêtres restées ouvertes, ou changez de port. |
+| `Address already in use` sur 8000, 8080, 5173 ou 8090 | un ancien lancement tourne encore | Rien à faire : le script réutilise ce qui tourne déjà. Pour repartir de zéro, fermez les fenêtres restées ouvertes. |
 | L'espace web affiche « Hors ligne » | `php artisan reverb:start` n'est pas lancé | Démarrez-le ; l'application reste utilisable sans, simplement sans direct. |
 | Le mobile ne joint pas l'API depuis un émulateur Android | l'émulateur a son propre `localhost` | Rien à faire : le code bascule seul sur `10.0.2.2`. Sur un **téléphone réel**, remplacez l'hôte par l'IP locale de la machine. |
 | `SQLSTATE… database is locked` | deux processus écrivent en même temps dans SQLite | Rare ici (sessions et cache sont sur fichier). Si cela persiste, passez sur MySQL. |

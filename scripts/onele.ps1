@@ -110,6 +110,16 @@ try {
     $mobilePrete = $false
     $adresseLocale = $null
     try {
+        # Un 8090 deja pris signifie qu'un lancement precedent tourne encore :
+        # le relancer echouerait sur « une seule utilisation de chaque adresse ».
+        if (Port-Ouvert $PORT_MOBILE) {
+            Note "Déjà en route sur le port $PORT_MOBILE — rien à relancer."
+            $mobileLance = $true
+            $mobilePrete = $true
+            $adresseLocale = Adresse-Locale
+            throw [OperationCanceledException]::new('deja en route')
+        }
+
         $flutter = Resoudre-Flutter -Racine $racine -Installer
 
         Push-Location $mobile
@@ -155,6 +165,9 @@ try {
                 Alerte 'La compilation prend plus longtemps que prévu ; regardez sa fenêtre.'
             }
         }
+    }
+    catch [OperationCanceledException] {
+        # Pas une panne : le mobile tournait deja, on garde ce qui est en place.
     }
     catch {
         Write-Host ""
