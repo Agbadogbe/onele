@@ -70,13 +70,16 @@ Deux contraintes, faciles à respecter d'un coup :
 
 En pratique, `C:\Users\vous\onele` ou `C:\onele` conviennent parfaitement.
 
-**macOS / Linux** :
+**macOS / Linux** — la même chose :
 
 ```bash
 ./scripts/onele.sh
 ```
 
-Là, l'application mobile se lance à part : `cd mobile && flutter run`.
+Dans les deux cas, une seule commande démarre l'API, le serveur temps réel,
+l'espace d'administration **et** l'application mobile, puis affiche l'adresse à
+ouvrir sur un téléphone. `Ctrl-C` arrête l'ensemble sous Unix ; sous Windows, il
+suffit de fermer les fenêtres.
 
 ### Si vous préférez les étapes séparées
 
@@ -85,6 +88,10 @@ Là, l'application mobile se lance à part : `cd mobile && flutter run`.
 | Installer seulement | `.\setup.bat` | `./scripts/setup.sh` |
 | Démarrer le web | `.\start.bat` | `./scripts/start.sh` |
 | Lancer le mobile | `.\mobile.bat` | `cd mobile && flutter run` |
+
+Sur macOS et Linux, Flutter n'est pas téléchargé automatiquement — il s'installe
+en une commande avec `brew` ou le gestionnaire de paquets. Sans lui,
+`onele.sh` démarre le web et le signale, sans échouer.
 
 `setup` installe les dépendances des trois composants, écrit les fichiers `.env`,
 crée la base et y charge le jeu de démonstration. `start` lance l'API, le serveur
