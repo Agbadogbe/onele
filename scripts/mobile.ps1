@@ -12,6 +12,7 @@
 $ErrorActionPreference = 'Stop'
 $racine = Split-Path -Parent $PSScriptRoot
 $mobile = Join-Path $racine 'mobile'
+$PORT_MOBILE = 8090
 . (Join-Path $PSScriptRoot 'outils.ps1')
 
 try {
@@ -40,28 +41,40 @@ try {
     }
     finally { Pop-Location }
 
-    $navigateur = Resoudre-Navigateur
-    if ($navigateur) { Note "Chrome absent — l'application s'ouvrira dans Edge." }
-
     $cible = Choisir-Cible $flutter
 
     Etape 'Lancement'
     Note "Cible : $($cible.Nom)"
-    if ($cible.Id -eq 'chrome') {
-        Note 'Aucun téléphone ni émulateur détecté — l''application s''ouvre dans le navigateur.'
-        Note 'Réduisez la fenêtre à la largeur d''un téléphone pour la voir telle qu''elle est prévue.'
-    }
     Write-Host ""
     Note 'Compte employé : moussa.ndiaye@onele.test / password'
     Note 'La première compilation prend une à deux minutes.'
     Note 'Appuyez sur « q » dans cette fenêtre pour arrêter.'
-    Write-Host ""
 
-    Push-Location $mobile
-    try {
-        & $flutter run -d $cible.Id
+    if ($cible.Id -eq 'chrome') {
+        # Servi sur toutes les interfaces plutot que lance dans un navigateur :
+        # l'application devient joignable depuis un telephone du reseau local,
+        # et elle deduit seule ou est l'API — c'est l'hote qui l'a servie.
+        $adresse = Adresse-Locale
+        Write-Host ""
+        Note "Sur ce PC          http://localhost:$PORT_MOBILE"
+        if ($adresse) {
+            Write-Host "  Sur un téléphone   http://${adresse}:$PORT_MOBILE" -ForegroundColor Yellow
+            Note 'Même Wi-Fi que ce PC ; aucune installation sur le téléphone.'
+        }
+        Write-Host ""
+        Push-Location $mobile
+        try {
+            & $flutter run -d web-server --web-hostname=0.0.0.0 --web-port=$PORT_MOBILE
+        }
+        finally { Pop-Location }
+    } else {
+        Write-Host ""
+        Push-Location $mobile
+        try {
+            & $flutter run -d $cible.Id
+        }
+        finally { Pop-Location }
     }
-    finally { Pop-Location }
 }
 catch {
     Write-Host ""

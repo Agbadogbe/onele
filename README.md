@@ -145,14 +145,41 @@ Une fois `start` en route, dans un quatrième terminal :
 cd mobile && flutter run    # macOS / Linux
 ```
 
-`mobile.bat` installe Flutter s'il manque, puis choisit sa cible tout seul :
-un téléphone Android branché en USB s'il y en a un, sinon un émulateur déjà
-démarré, sinon Chrome. L'adresse de l'API s'adapte à la plateforme —
-`10.0.2.2` depuis un émulateur Android, `127.0.0.1` ailleurs.
+`onele.bat` installe Flutter s'il manque, puis choisit sa cible tout seul : un
+téléphone Android branché en USB s'il y en a un, sinon un émulateur déjà
+démarré, sinon le navigateur.
 
-Sur un **vrai téléphone**, il faut en plus remplacer l'hôte par l'IP locale de
-la machine dans `mobile/lib/services/api_client.dart` : le téléphone et le PC ne
-partagent pas `127.0.0.1`.
+### Sur un vrai téléphone, sans rien installer dessus
+
+C'est le plus intéressant, et ça ne demande aucune manipulation. Quand
+l'application est servie dans le navigateur, elle l'est **sur tout le réseau
+local** : le terminal affiche une seconde adresse, du genre
+
+```
+Sur un téléphone   http://192.168.1.42:8090
+```
+
+Ouvrez-la dans le navigateur du téléphone, sur le même Wi-Fi que le PC. Rien à
+installer côté téléphone, pas d'APK, pas de compte.
+
+Aucune configuration non plus : sur le web, l'application déduit l'adresse de
+l'API de **celle qui lui a servi la page**. Servie depuis `192.168.1.42:8090`,
+elle s'adresse à `192.168.1.42:8000` pour l'API et à `192.168.1.42:8080` pour le
+temps réel — voir `hoteServeur` dans
+[`mobile/lib/services/api_client.dart`](mobile/lib/services/api_client.dart).
+
+Deux réserves :
+
+- **Le pare-feu Windows** peut demander l'autorisation au premier démarrage,
+  puisque l'API se met à écouter sur le réseau et plus seulement en local.
+  Répondez oui pour les réseaux privés ; sans cela le téléphone ne verra rien.
+- **N'importe qui sur le même réseau** peut alors ouvrir l'application. Sur un
+  Wi-Fi public, mieux vaut s'abstenir — ce sont des données de démonstration,
+  mais autant le savoir.
+
+*Et non, Expo ne convient pas ici : c'est l'outillage de React Native, alors que
+le mobile d'Onélé est écrit en Flutter. L'adresse ci-dessus rend le même
+service — l'application sur un vrai téléphone, en quelques secondes.*
 
 ---
 

@@ -39,7 +39,7 @@ try {
     Write-Host "  -----------------" -ForegroundColor DarkGray
 
     # ------------------------------------------------------ Les trois services
-    Start-Process -FilePath $outils.Php -ArgumentList 'artisan','serve','--port=8000' -WorkingDirectory $backend
+    Start-Process -FilePath $outils.Php -ArgumentList 'artisan','serve','--host=0.0.0.0','--port=8000' -WorkingDirectory $backend
     Note 'API Laravel      : port 8000'
 
     Start-Process -FilePath $outils.Php -ArgumentList 'artisan','reverb:start' -WorkingDirectory $backend

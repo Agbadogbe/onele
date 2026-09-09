@@ -573,3 +573,32 @@ function Choisir-Cible([string]$flutter) {
 
     return @{ Id = 'chrome'; Nom = 'navigateur' }
 }
+
+function Adresse-Locale {
+    # L'adresse de la machine sur son reseau local : c'est par elle qu'un
+    # telephone joint l'API et le serveur temps reel.
+    try {
+        $carte = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction Stop |
+            Where-Object {
+                $_.IPAddress -ne '127.0.0.1' -and
+                $_.IPAddress -notlike '169.254.*' -and
+                $_.PrefixOrigin -in @('Dhcp', 'Manual')
+            } |
+            Sort-Object -Property InterfaceMetric |
+            Select-Object -First 1
+        if ($carte) { return $carte.IPAddress }
+    } catch {
+        # Applet absente : on passe par la resolution de nom.
+    }
+    try {
+        foreach ($ip in [System.Net.Dns]::GetHostAddresses([System.Net.Dns]::GetHostName())) {
+            $texte = $ip.ToString()
+            if ($ip.AddressFamily -eq 'InterNetwork' -and $texte -ne '127.0.0.1' -and $texte -notlike '169.254.*') {
+                return $texte
+            }
+        }
+    } catch {
+        # Rien de exploitable : l'appel rend $null et l'appelant s'en accommode.
+    }
+    return $null
+}

@@ -5,11 +5,17 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// L'émulateur Android route son propre "localhost" vers lui-même ;
-/// 10.0.2.2 est l'alias spécial qui pointe vers la machine hôte.
-/// Sur un vrai appareil, remplacer par l'IP réseau du serveur Laravel.
-String get hoteServeur =>
-    (!kIsWeb && Platform.isAndroid) ? '10.0.2.2' : '127.0.0.1';
+/// Où joindre l'API, selon d'où l'application tourne.
+///
+/// Sur le web, on reprend l'hôte qui a servi la page : ouverte depuis un
+/// téléphone du réseau local sur `http://192.168.x.y:8090`, l'application
+/// s'adresse d'elle-même à `192.168.x.y:8000`, sans rien à configurer.
+/// L'émulateur Android, lui, route son propre « localhost » vers lui-même ;
+/// 10.0.2.2 est l'alias spécial qui désigne la machine hôte.
+String get hoteServeur {
+  if (kIsWeb) return Uri.base.host;
+  return Platform.isAndroid ? '10.0.2.2' : '127.0.0.1';
+}
 
 String get apiBase => 'http://$hoteServeur:8000/api';
 

@@ -30,7 +30,7 @@ nettoyer() {
 }
 trap nettoyer INT TERM
 
-(cd "$racine/backend" && php artisan serve --port=8000)   & pids+=($!)
+(cd "$racine/backend" && php artisan serve --host=0.0.0.0 --port=8000) & pids+=($!)
 note 'API Laravel      : port 8000'
 (cd "$racine/backend" && php artisan reverb:start)        & pids+=($!)
 note 'Serveur Reverb   : port 8080'

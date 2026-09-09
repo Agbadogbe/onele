@@ -12,6 +12,7 @@ $racine  = Split-Path -Parent $PSScriptRoot
 $backend = Join-Path $racine 'backend'
 $web     = Join-Path $racine 'web'
 $mobile  = Join-Path $racine 'mobile'
+$PORT_MOBILE = 8090
 . (Join-Path $PSScriptRoot 'outils.ps1')
 
 try {
@@ -58,7 +59,10 @@ try {
     if (Port-Ouvert 8000) {
         Note 'API Laravel      : déjà en route sur le port 8000'
     } else {
-        Start-Process -FilePath $outils.Php -ArgumentList 'artisan','serve','--port=8000' -WorkingDirectory $backend
+        # --host=0.0.0.0 plutot que la boucle locale : sans cela un telephone du
+        # reseau ne verrait pas l'API. Windows demandera peut-etre l'autorisation
+        # du pare-feu au premier lancement.
+        Start-Process -FilePath $outils.Php -ArgumentList 'artisan','serve','--host=0.0.0.0','--port=8000' -WorkingDirectory $backend
         Note 'API Laravel      : port 8000'
     }
 
@@ -103,6 +107,8 @@ try {
     # l'espace d'administration tourne deja, autant qu'il reste utilisable.
     Etape 'Application mobile'
     $mobileLance = $false
+    $mobilePrete = $false
+    $adresseLocale = $null
     try {
         $flutter = Resoudre-Flutter -Racine $racine -Installer
 
@@ -113,18 +119,42 @@ try {
         }
         finally { Pop-Location }
 
-        $navigateur = Resoudre-Navigateur
-        if ($navigateur) { Note "Chrome absent — l'application s'ouvrira dans Edge." }
-
         $cible = Choisir-Cible $flutter
         Note "Cible : $($cible.Nom)"
         Note 'La compilation prend une à deux minutes ; une fenêtre lui est réservée.'
 
-        $commande = "Set-Location '$mobile'; & '$flutter' run -d $($cible.Id)"
+        if ($cible.Id -eq 'chrome') {
+            # Plutot que de lancer Chrome, on sert l'application sur toutes les
+            # interfaces : le PC l'ouvre comme avant, et un telephone du reseau
+            # local y accede par la meme adresse. L'application deduit alors
+            # seule ou joindre l'API — c'est l'hote qui lui a servi la page.
+            $arguments = "run -d web-server --web-hostname=0.0.0.0 --web-port=$PORT_MOBILE"
+        } else {
+            $arguments = "run -d $($cible.Id)"
+        }
+        $commande = "Set-Location '$mobile'; & '$flutter' $arguments"
         Start-Process -FilePath 'powershell' `
                       -ArgumentList '-NoExit','-NoProfile','-ExecutionPolicy','Bypass','-Command',$commande `
                       -WorkingDirectory $mobile
         $mobileLance = $true
+
+        if ($cible.Id -eq 'chrome') {
+            Write-Host ""
+            Write-Host -NoNewline '  Compilation de l''application mobile'
+            foreach ($essai in 1..360) {
+                Start-Sleep -Seconds 1
+                if ($essai % 3 -eq 0) { Write-Host -NoNewline '.' }
+                if (Port-Ouvert $PORT_MOBILE) { $mobilePrete = $true; break }
+            }
+            Write-Host ""
+            if ($mobilePrete) {
+                Bien 'Application mobile prête'
+                Start-Process "http://localhost:$PORT_MOBILE"
+                $adresseLocale = Adresse-Locale
+            } else {
+                Alerte 'La compilation prend plus longtemps que prévu ; regardez sa fenêtre.'
+            }
+        }
     }
     catch {
         Write-Host ""
@@ -140,7 +170,18 @@ try {
     Write-Host "                 admin@onele.test / password        (direction)"
     Write-Host "                 fatou.kone@onele.test / password   (RH)"
     Write-Host ""
-    if ($mobileLance) {
+    if ($mobilePrete) {
+        Write-Host "  Application mobile   http://localhost:$PORT_MOBILE" -ForegroundColor Yellow
+        Write-Host "                 moussa.ndiaye@onele.test / password"
+        Write-Host ""
+        if ($adresseLocale) {
+            Write-Host "  Sur un vrai téléphone" -ForegroundColor Cyan
+            Write-Host "      Même Wi-Fi que ce PC, puis dans le navigateur du téléphone :" -ForegroundColor DarkGray
+            Write-Host "      http://${adresseLocale}:$PORT_MOBILE" -ForegroundColor Yellow
+            Write-Host "      Aucune installation : l'application s'adresse d'elle-même à ce PC." -ForegroundColor DarkGray
+            Write-Host ""
+        }
+    } elseif ($mobileLance) {
         Write-Host "  Application mobile — dans sa propre fenêtre" -ForegroundColor Yellow
         Write-Host "                 moussa.ndiaye@onele.test / password"
         Write-Host ""
